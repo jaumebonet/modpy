@@ -8,7 +8,7 @@
 # @lab:    LPDI/EPFL
 #
 # @last modified by:   jaumebonet
-# @last modified time: 2015-05-08 17:24:10
+# @last modified time: 2015-05-10 15:07:37
 #
 # -*-
 import re
@@ -28,22 +28,21 @@ def basic_parser(*args, **kargs):
 
     @return: argparse.ArgumentParser object
     '''
-    parser = ArgumentParser(ormatter_class=ArgumentDefaultsHelpFormatter)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('--pir', dest='alignment', type=str, action='store',
                         help="PIR formated alignment", metavar="PIR_FILE")
-
-    parser.add_option("--out", dest="out", type=str, action="store",
-                      default='seqNAME', metavar="OUT_PREFIX",
-                      help="Prefix for the log and error file")
-    parser.add_option("-v", dest="verbose", action="store_true",
-                      default=False, help="Verbose Mode")
+    parser.add_argument("--out", dest="out", type=str, action="store",
+                        default=None, metavar="OUT_PREFIX",
+                        help="Prefix for the log and error file")
+    parser.add_argument("-v", dest="verbose", action="store_true",
+                        default=False, help="Verbose Mode")
     return parser
 
 
 def identify_pir(filename):
     '''
-    Identify known structures and query sequence in the alignment.
+    Identify known structures and query sequence in the PIR alignment.
 
     @return: {'str': [str(), ...], 'seq': str()}
     '''
@@ -51,11 +50,18 @@ def identify_pir(filename):
     data = {'str': [], 'seq': None}
 
     with open(filename) as fd:
+        nextline = False
+        mcontent = None
         for line in fd:
             m = _idr.match(line)
             if m:
-                if fd.readline().startswith('strcutureX'):
-                    data['str'].append(m.group(1).strip())
-                else:
-                    data['seq'].append(m.group(1).strip())
+                nextline = True
+                mcontent = m.group(1).strip()
+                continue
+            if nextline and line.startswith('structureX'):
+                    data['str'].append(mcontent)
+                    nextline, mcontent = False, None
+            elif nextline and line.startswith('sequence'):
+                    data['seq'] = mcontent
+                    nextline, mcontent = False, None
     return data

@@ -4,16 +4,18 @@
 # @email:  jaume.bonet@gmail.com
 # @url:    jaumebonet.github.io
 #
-# @date:   2015-05-08 16:16:50
+# @date:   2015-05-10 16:35:48
 # @lab:    LPDI/EPFL
 #
 # @last modified by:   jaumebonet
-# @last modified time: 2015-05-10 16:55:46
+# @last modified time: 2015-05-10 17:43:39
 #
 # -*-
 '''
 Given a PIR alignment and a minimal set of parameters generates models
 through homology modeling with MODELLER.
+
+In this instance, it takes a special care into optimize loop regions.
 
 [!] The script does not contain any input check.
 [!] The simple_model function redirects STDOUT and STDERR to file logs.
@@ -44,14 +46,18 @@ def set_options(*args, **kargs):
     parser.add_argument("--models", dest="numMod",     action="store",
                         type=int,   metavar="MOD_NUM", default=5,
                         help="Number of models to be done (min: 1) [Default: 5]")
-
+    parser.add_argument("--loops", dest="numLoop",     action="store",
+                        type=int,  metavar="LOOP_NUM", default=5,
+                        help="Number of loop to be done per model (min: 1) [Default: 5]")
+    parser.add_argument("--dopeloop",  dest="dopel", action="store_true",
+                        default=False, help="Optimize loops with DOPE")
     parser.add_argument("--optimize",  dest="optimize", action="store_true",
                         default=False, help="Activate optimization")
     return parser.parse_args()
 
 
-def simple_model(alignment, instances,
-                 output=None, optimize=False, verbose=False):
+def loop_model(alignment, instances, linstances,
+               output=None, dopeloop=False, optimize=False, verbose=False):
 
     contents = identify_pir(alignment)
 
@@ -67,16 +73,24 @@ def simple_model(alignment, instances,
 
     env.io.hetatm = True  # Allow the presence of hetatoms
 
-    a = automodel(env,  # Loading the environment
-                  alnfile=alignment,         # Assigning the PIR alignment
-                  knowns=contents['str'],    # Listing the known structures
-                  sequence=contents['seq'],  # Identify the Query Sequence
-                  assess_methods=(assess.DOPE,
-                                  assess.GA341,
-                                  assess.DOPEHR))  # Energy evaluation methods
+    if not dopeloop: loopBaseClass = loopmodel
+    else:            loopBaseClass = dopehr_loopmodel
+
+    class MyLoop(loopBaseClass):
+        pass
+
+    a = MyLoop(env,  # Loading the environment
+               alnfile=alignment,         # Assigning the PIR alignment
+               knowns=contents['str'],    # Listing the known structures
+               sequence=contents['seq'],  # Identify the Query Sequence
+               assess_methods=(assess.DOPE,
+                               assess.GA341),
+               loop_assess_methods=assess.DOPE)  # Energy evaluation methods
 
     # Setting Starting and Ending Model number
     a.starting_model, a.ending_model = 1, instances
+    # Setting Starting and Ending Loop number per model
+    a.loop.starting_model, a.loop.ending_model = 1, linstances
 
     if optimize:
         # Very thorough VTFM optimization:
@@ -84,7 +98,8 @@ def simple_model(alignment, instances,
         a.max_var_iterations = 300
 
         # Thorough MD optimization:
-        a.md_level = refine.slow
+        a.md_level      = refine.slow
+        a.loop.md_level = refine.slow
 
         # Repeat the whole cycle 2 times and do not stop unless obj.func. > 1E6
         a.repeat_optimization = 2
@@ -105,5 +120,5 @@ def simple_model(alignment, instances,
 
 if __name__ == '__main__':
     options = set_options()
-    simple_model(options.alignment, options.numMod, options.out,
-                 options.optimize, options.verbose)
+    loop_model(options.alignment, options.numMod, options.numLoop, options.out,
+               options.dopel, options.optimize, options.verbose)
