@@ -8,7 +8,7 @@
 # @lab:    LPDI/EPFL
 #
 # @last modified by:   jaumebonet
-# @last modified time: 2015-05-10 17:43:39
+# @last modified time: 2015-05-11 13:29:23
 #
 # -*-
 '''
@@ -18,7 +18,7 @@ through homology modeling with MODELLER.
 In this instance, it takes a special care into optimize loop regions.
 
 [!] The script does not contain any input check.
-[!] The simple_model function redirects STDOUT and STDERR to file logs.
+[!] The loop_model function redirects STDOUT and STDERR to file logs.
     The redirection is terminated before the function ends.
 
 '''
@@ -116,7 +116,7 @@ def loop_model(alignment, instances, linstances,
     # We delete the error file if no error has occurred
     ERRsize = os.path.getsize(output + '.err')
     if int(ERRsize) is 0:
-        os.remove(options.out + '.err')
+        os.remove(output + '.err')
 
 if __name__ == '__main__':
     options = set_options()

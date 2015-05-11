@@ -4,19 +4,23 @@
 # @email:  jaume.bonet@gmail.com
 # @url:    jaumebonet.github.io
 #
-# @date:   2015-05-08 16:16:50
+# @date:   2015-05-11 13:28:48
 # @lab:    LPDI/EPFL
 #
 # @last modified by:   jaumebonet
-# @last modified time: 2015-05-11 13:33:39
+# @last modified time: 2015-05-11 13:40:29
 #
 # -*-
+
 '''
 Given a PIR alignment and a minimal set of parameters generates models
 through homology modeling with MODELLER.
 
+In this instance, it allows to "force" secondary structure definitions and/or
+distance constraints.
+
 [!] The script does not contain any input check.
-[!] The simple_model function redirects STDOUT and STDERR to file logs.
+[!] The restrained_model function redirects STDOUT and STDERR to file logs.
     The redirection is terminated before the function ends.
 
 '''
@@ -41,6 +45,17 @@ def set_options(*args, **kargs):
     parser = ArgumentParser(parents = [basic_parser()],
                             conflict_handler='resolve')
 
+    # Setting forced alpha-helix --> each entry is a tuple; repetitions store several tuples
+    parser.add_argument("--ahelix", dest="ahelix", action="append", type=int, nargs=2,
+                         help="Regions forced to be alpha helix", metavar="A_ini A_end")
+    # Setting forced beta-strand --> each entry is a tuple; repetitions store several tuples
+    parser.add_argument("--bstrand", dest="bstrand", action="append", type=int, nargs=2,
+                         help="Regions forced to be abeta strand", metavar="S_ini S_end")
+    # Fixing distances between CA --> each entry is a tuple; repetitions store several tuples
+    parser.add_argument("--distance", dest="distance", action="append", nargs=3,
+                        type=float, metavar="CA1 CA2 Dist",
+                         help="Fixed distance between two CA, specify as: CA1 CA2 Distance")
+
     parser.add_argument("--models", dest="numMod",     action="store",
                         type=int,   metavar="MOD_NUM", default=5,
                         help="Number of models to be done (min: 1) [Default: 5]")
@@ -50,8 +65,8 @@ def set_options(*args, **kargs):
     return parser.parse_args()
 
 
-def simple_model(alignment, instances,
-                 output=None, optimize=False, verbose=False):
+def restrained_model(alignment, instances, helices=None, betas=None, distances=None,
+                     output=None, optimize=False, verbose=Falese):
 
     contents = identify_pir(alignment)
 
@@ -66,6 +81,35 @@ def simple_model(alignment, instances,
     env = environ()  # Initializes the 'environment' for this modeling run
 
     env.io.hetatm = True  # Allow the presence of hetatoms
+
+    class MyModel(automodel):
+        def special_restraints(self, aln):
+            rsr = self.restraints
+            at = self.atoms
+            # Setting forced alpha helices
+            try:
+                for helix in helices:
+                    rsr.add(secondary_structure.alpha(self.residue_range(str(helix[0])+':',
+                                                                         str(helix[1])+':')))
+            except TypeError: pass
+
+            # Setting forced beta strands
+            try:
+                for strand in betas:
+                    rsr.add(secondary_structure.strand(self.residue_range(str(strand[0])+':',
+                                                                          str(strand[1])+':')))
+            except TypeError: pass
+
+            # Setting distance restraints
+            try:
+                for restraint in distances:
+                    rsr.add(forms.gaussian(group=physical.xy_distance,
+                                           feature=features.distance(at['CA:' + str(restraint[0])],
+                                                                     at['CA:' + str(restraint[1])]),
+                                           mean=float(restraint[2]),
+                                           stdev=0.1)
+                            )
+            except TypeError: pass
 
     a = automodel(env,  # Loading the environment
                   alnfile=alignment,         # Assigning the PIR alignment
@@ -105,5 +149,5 @@ def simple_model(alignment, instances,
 
 if __name__ == '__main__':
     options = set_options()
-    simple_model(options.alignment, options.numMod, options.out,
-                 options.optimize, options.verbose)
+    restrained_model(options.alignment, options.numMod, options.out,
+                     options.optimize, options.verbose)
