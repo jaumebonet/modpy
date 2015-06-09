@@ -8,7 +8,7 @@
 # @lab:    LPDI/EPFL
 #
 # @last modified by:   jaumebonet
-# @last modified time: 2015-05-11 13:29:23
+# @last modified time: 2015-05-28 10:36:34
 #
 # -*-
 '''
@@ -89,6 +89,7 @@ def loop_model(alignment, instances, linstances,
 
     # Setting Starting and Ending Model number
     a.starting_model, a.ending_model = 1, instances
+    if linstances <= 0: linstances = 1
     # Setting Starting and Ending Loop number per model
     a.loop.starting_model, a.loop.ending_model = 1, linstances
 
