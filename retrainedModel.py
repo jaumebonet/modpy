@@ -8,7 +8,7 @@
 # @lab:    LPDI/EPFL
 #
 # @last modified by:   jaumebonet
-# @last modified time: 2015-05-11 13:40:29
+# @last modified time: 2015-10-29 16:17:21
 #
 # -*-
 
@@ -66,7 +66,7 @@ def set_options(*args, **kargs):
 
 
 def restrained_model(alignment, instances, helices=None, betas=None, distances=None,
-                     output=None, optimize=False, verbose=Falese):
+                     output=None, optimize=False, verbose=False):
 
     contents = identify_pir(alignment)
 

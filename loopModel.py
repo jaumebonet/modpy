@@ -7,8 +7,8 @@
 # @date:   2015-05-10 16:35:48
 # @lab:    LPDI/EPFL
 #
-# @last modified by:   jaumebonet
-# @last modified time: 2015-05-28 10:36:34
+# @last modified by:   jaume.bonet
+# @last modified time: 2016-11-22 13:25:02
 #
 # -*-
 '''
@@ -49,6 +49,9 @@ def set_options(*args, **kargs):
     parser.add_argument("--loops", dest="numLoop",     action="store",
                         type=int,  metavar="LOOP_NUM", default=5,
                         help="Number of loop to be done per model (min: 1) [Default: 5]")
+    parser.add_argument("--constraints", dest="constraints", action="store",
+                        type=str, metavar="CONST", default=None,
+                        help="Constraint file")
     parser.add_argument("--dopeloop",  dest="dopel", action="store_true",
                         default=False, help="Optimize loops with DOPE")
     parser.add_argument("--optimize",  dest="optimize", action="store_true",
@@ -83,6 +86,7 @@ def loop_model(alignment, instances, linstances,
                alnfile=alignment,         # Assigning the PIR alignment
                knowns=contents['str'],    # Listing the known structures
                sequence=contents['seq'],  # Identify the Query Sequence
+               csrfile=options.constraints,
                assess_methods=(assess.DOPE,
                                assess.GA341),
                loop_assess_methods=assess.DOPE)  # Energy evaluation methods
@@ -118,6 +122,7 @@ def loop_model(alignment, instances, linstances,
     ERRsize = os.path.getsize(output + '.err')
     if int(ERRsize) is 0:
         os.remove(output + '.err')
+
 
 if __name__ == '__main__':
     options = set_options()
